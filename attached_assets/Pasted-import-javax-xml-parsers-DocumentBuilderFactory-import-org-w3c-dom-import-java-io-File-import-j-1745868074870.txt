@@ -1,0 +1,107 @@
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.*;
+import java.io.File;
+import java.util.*;
+
+public class I18NTextMatcher {
+
+    public static void main(String[] args) throws Exception {
+        Map<String, String> stringResources = loadStringsXml("strings.xml");
+
+        String extractedText = "Additional taxes may apply. One-time use; if purchased, this item can only be redeemed once. App purchases are managed through the Amazon.com marketplace. To manage your orders, apps and subscriptions, please visit Amazon.com. Sold by Amazon.com Services, Inc.";
+        Map<String, MatchResult> matches = findBestMatchingStrings(extractedText, stringResources);
+
+        for (Map.Entry<String, MatchResult> entry : matches.entrySet()) {
+            System.out.println("Text: \"" + entry.getKey() + "\"\n string_key: " + entry.getValue().key + "\n");
+        }
+    }
+
+    public static Map<String, String> loadStringsXml(String path) throws Exception {
+        Map<String, String> map = new HashMap<>();
+        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new File(path));
+        NodeList nodeList = doc.getElementsByTagName("string");
+
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Element element = (Element) nodeList.item(i);
+            String name = element.getAttribute("name");
+            String value = element.getTextContent().replaceAll("\\s+", " ").trim();
+            map.put(name, value);
+        }
+        return map;
+    }
+
+    public static Map<String, MatchResult> findBestMatchingStrings(String extractedText, Map<String, String> stringResources) {
+        String[] sentences = extractedText.split("(?<=[.!?])\\s+");
+        List<String> sentenceList = Arrays.asList(sentences);
+        Map<String, MatchResult> bestMatches = new LinkedHashMap<>();
+
+        Map<String, String> normalizedResources = new HashMap<>();
+        for (Map.Entry<String, String> entry : stringResources.entrySet()) {
+            normalizedResources.put(entry.getKey(), normalizeText(entry.getValue()));
+        }
+
+        int n = sentenceList.size();
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j <= n; j++) {
+                String combined = String.join(" ", sentenceList.subList(i, j)).trim();
+                String normalizedCombined = normalizeText(combined);
+
+                String bestKey = null;
+                double bestScore = 0.0;
+
+                for (Map.Entry<String, String> entry : normalizedResources.entrySet()) {
+                    double score = similarity(normalizedCombined, entry.getValue());
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestKey = entry.getKey();
+                    }
+                }
+
+                if (bestKey != null && bestScore > 0.5) {
+                    bestMatches.put(combined, new MatchResult(bestKey, bestScore));
+                }
+            }
+        }
+
+        return bestMatches;
+    }
+
+    public static String normalizeText(String text) {
+        return text.toLowerCase().replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
+    }
+
+    public static double similarity(String a, String b) {
+        String[] wordsA = a.split(" ");
+        String[] wordsB = b.split(" ");
+
+        int intersectionCount = 0;
+        int unionCount = wordsA.length + wordsB.length;
+
+        Map<String, Integer> wordCountMap = new HashMap<>();
+        for (String word : wordsB) {
+            wordCountMap.put(word, wordCountMap.getOrDefault(word, 0) + 1);
+        }
+
+        for (String word : wordsA) {
+            if (wordCountMap.containsKey(word)) {
+                intersectionCount++;
+                wordCountMap.put(word, wordCountMap.get(word) - 1);
+                if (wordCountMap.get(word) == 0) {
+                    wordCountMap.remove(word);
+                }
+            }
+        }
+
+        return unionCount == 0 ? 0 : (double) intersectionCount / (unionCount - intersectionCount);
+    }
+
+    static class MatchResult {
+        String key;
+        double score;
+
+        MatchResult(String key, double score) {
+            this.key = key;
+            this.score = score;
+        }
+    }
+}

@@ -35,39 +35,51 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
     // Process results
     const results: { text: string; confidence: string }[] = [];
     
-    // Extract text from the OCR result
+    // Extract text from the OCR result, preserving sentence structure
     if (result.data.text && result.data.text.trim() !== '') {
-      // Split the text by lines and words to get individual items
-      const lines = result.data.text.split('\n').filter(line => line.trim() !== '');
+      // First, keep the full text as a single block
+      results.push({
+        text: result.data.text.trim(),
+        confidence: "0.95"
+      });
       
-      // Process each line
-      lines.forEach(line => {
-        // For each line, also split by spaces to get individual words
-        const words = line.split(/\s+/).filter(word => word.trim() !== '');
-        
-        if (words.length > 0) {
-          // Add each word with estimated confidence
-          words.forEach(word => {
-            if (word.trim() !== '') {
-              results.push({
-                text: word.trim(),
-                confidence: "0.85" // Estimated confidence for words
-              });
-            }
-          });
-          
-          // Also add the full line as it might be a complete phrase
+      // Split the text by sentences - using regex to match end of sentences
+      const sentences = result.data.text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+      
+      // Add each sentence with high confidence as they maintain context
+      sentences.forEach(sentence => {
+        if (sentence.trim().length > 0) {
           results.push({
-            text: line.trim(),
-            confidence: "0.90" // Typically, lines have higher confidence than individual words
+            text: sentence.trim(),
+            confidence: "0.90"
           });
         }
       });
       
-      // Add the full text as well, which might be useful for matching
-      results.push({
-        text: result.data.text.trim(),
-        confidence: "0.95"
+      // Split the text by paragraphs (double line breaks)
+      const paragraphs = result.data.text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      
+      // Add each paragraph as a block
+      paragraphs.forEach(paragraph => {
+        if (paragraph.trim().length > 0) {
+          results.push({
+            text: paragraph.trim(),
+            confidence: "0.92"
+          });
+        }
+      });
+      
+      // Split by single line breaks to get lines
+      const lines = result.data.text.split('\n').filter(line => line.trim().length > 0);
+      
+      // Add each line
+      lines.forEach(line => {
+        if (line.trim().length > 0) {
+          results.push({
+            text: line.trim(),
+            confidence: "0.88"
+          });
+        }
       });
     }
     
@@ -86,10 +98,15 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
       ];
     }
     
-    // Remove duplicate text entries
-    const uniqueResults = results.filter((item, index, self) =>
-      index === self.findIndex(t => t.text === item.text)
-    );
+    // Remove duplicate text entries but preserve order
+    const seen = new Set<string>();
+    const uniqueResults = results.filter(item => {
+      if (seen.has(item.text)) {
+        return false;
+      }
+      seen.add(item.text);
+      return true;
+    });
     
     return uniqueResults;
   } catch (error) {
@@ -107,7 +124,7 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
   }
 }
 
-// Mock string matcher function
+// Improved string matcher function based on the provided Java implementation
 async function matchStrings(extractedTexts: string[], resourceData: string, fileType: string) {
   const resourceStrings: Record<string, string> = {};
   
@@ -124,7 +141,9 @@ async function matchStrings(extractedTexts: string[], resourceData: string, file
         
         strings.forEach((str: any) => {
           if (str.$ && str.$.name && str._) {
-            resourceStrings[str._] = str.$.name;
+            // Normalize the resource string for better matching
+            const value = str._.replace(/\s+/g, ' ').trim();
+            resourceStrings[str.$.name] = value;
           }
         });
       }
@@ -134,10 +153,12 @@ async function matchStrings(extractedTexts: string[], resourceData: string, file
   } else if (fileType === 'json') {
     try {
       const jsonData = JSON.parse(resourceData);
-      // Flatten JSON structure - assumes a simple key-value structure
+      // Parse JSON structure
       for (const [key, value] of Object.entries(jsonData)) {
         if (typeof value === 'string') {
-          resourceStrings[value] = key;
+          // Normalize the resource string for better matching
+          const normalizedValue = value.replace(/\s+/g, ' ').trim();
+          resourceStrings[key] = normalizedValue;
         }
       }
     } catch (error) {
@@ -145,17 +166,124 @@ async function matchStrings(extractedTexts: string[], resourceData: string, file
     }
   }
   
-  // Match extracted texts with resource strings
+  // Helper functions for text matching
+  function normalizeText(text: string): string {
+    return text.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  
+  function calculateSimilarity(a: string, b: string): number {
+    const wordsA = a.split(' ');
+    const wordsB = b.split(' ');
+    
+    const wordCountMap = new Map<string, number>();
+    
+    // Count occurrences of words in B
+    for (const word of wordsB) {
+      wordCountMap.set(word, (wordCountMap.get(word) || 0) + 1);
+    }
+    
+    let intersectionCount = 0;
+    const unionCount = wordsA.length + wordsB.length;
+    
+    // Find intersection between A and B
+    for (const word of wordsA) {
+      const count = wordCountMap.get(word);
+      if (count && count > 0) {
+        intersectionCount++;
+        wordCountMap.set(word, count - 1);
+      }
+    }
+    
+    // Calculate Jaccard similarity
+    return unionCount === 0 ? 0 : intersectionCount / (unionCount - intersectionCount);
+  }
+  
+  // Process extracted texts to find best matches
+  interface MatchResult {
+    text: string;
+    stringId: string;
+    score: number;
+  }
+  
+  const bestMatches = new Map<string, MatchResult>();
+  const normalizedResources = new Map<string, string>();
+  
+  // Normalize all resource strings
+  for (const [key, value] of Object.entries(resourceStrings)) {
+    normalizedResources.set(key, normalizeText(value));
+  }
+  
+  // Split extractedTexts into sentences and try different combinations
+  let allTextCombinations: string[] = [];
+  
+  // First, add all the original extracted texts
+  allTextCombinations = [...extractedTexts];
+  
+  // Then, try to combine adjacent strings to form potential sentences
+  for (let i = 0; i < extractedTexts.length; i++) {
+    let combined = extractedTexts[i];
+    for (let j = i + 1; j < Math.min(i + 5, extractedTexts.length); j++) {
+      combined += " " + extractedTexts[j];
+      allTextCombinations.push(combined);
+    }
+  }
+  
+  // Split long texts into sentences that might match resource strings
+  const sentenceSplitted: string[] = [];
+  for (const text of allTextCombinations) {
+    if (text.length > 20) {
+      const sentences = text.split(/(?<=[.!?])\s+/);
+      sentenceSplitted.push(...sentences);
+    }
+  }
+  allTextCombinations = [...allTextCombinations, ...sentenceSplitted];
+  
+  // Match each text against resource strings
+  for (const text of allTextCombinations) {
+    if (!text || text.trim().length === 0) continue;
+    
+    const normalizedText = normalizeText(text);
+    let bestKey = "";
+    let bestScore = 0;
+    
+    // Use Array.from to convert Map entries to an array for iteration
+    Array.from(normalizedResources.entries()).forEach(([key, normalizedValue]) => {
+      const score = calculateSimilarity(normalizedText, normalizedValue);
+      if (score > bestScore && score > 0.3) { // Threshold for accepting a match
+        bestScore = score;
+        bestKey = key;
+      }
+    });
+    
+    if (bestKey && bestScore > 0) {
+      const currentMatch = bestMatches.get(text);
+      if (!currentMatch || bestScore > currentMatch.score) {
+        bestMatches.set(text, {
+          text,
+          stringId: bestKey,
+          score: bestScore
+        });
+      }
+    }
+  }
+  
+  // Construct final results
   const matches: { text: string; stringId: string }[] = [];
   const unmatched: string[] = [];
   
-  extractedTexts.forEach(text => {
-    if (resourceStrings[text]) {
-      matches.push({ text, stringId: resourceStrings[text] });
-    } else {
-      unmatched.push(text);
+  // Add all matched strings - use Array.from to avoid iteration issues
+  Array.from(bestMatches.entries()).forEach(([, match]) => {
+    if (match.score > 0.3) { // Only include matches above threshold
+      matches.push({ text: match.text, stringId: match.stringId });
     }
   });
+  
+  // Find unmatched strings (original texts not in bestMatches)
+  for (const text of extractedTexts) {
+    if (!bestMatches.has(text) || bestMatches.get(text)!.score <= 0.3) {
+      unmatched.push(text);
+    }
+  }
   
   // Generate suggested IDs for unmatched strings
   const unmatchedWithSuggestions = unmatched.map(text => {
@@ -302,10 +430,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No resource file uploaded' });
       }
       
-      const extractedTexts = JSON.parse(req.body.extractedTexts || '[]');
-      if (!Array.isArray(extractedTexts)) {
+      // Parse extracted text items from request body
+      const extractedItems = JSON.parse(req.body.extractedTexts || '[]');
+      if (!Array.isArray(extractedItems)) {
         return res.status(400).json({ error: 'Invalid extracted texts format' });
       }
+      
+      // Extract just the text content from each item
+      const extractedTexts = extractedItems.map(item => {
+        // If item is an object with text property, extract the text
+        if (typeof item === 'object' && item !== null && 'text' in item) {
+          return item.text;
+        }
+        // If item is a string, use as is
+        else if (typeof item === 'string') {
+          return item;
+        }
+        // Otherwise return empty string
+        return '';
+      }).filter(text => text.trim() !== '');
+      
+      console.log(`Processing ${extractedTexts.length} text items for matching`);
       
       // Determine file type from content
       const fileContent = req.file.buffer.toString('utf8');
@@ -322,6 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const matchResult = await matchStrings(extractedTexts, fileContent, fileType);
+      console.log(`Found ${matchResult.matched.length} matches and ${matchResult.unmatched.length} unmatched items`);
       
       return res.json({
         success: true,
