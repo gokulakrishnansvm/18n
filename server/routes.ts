@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
+import { parseStringPromise } from 'xml2js';
 import { 
   extractTextSchema, 
   matchStringsSchema, 
@@ -22,302 +23,252 @@ const upload = multer({
 });
 
 // Real text extraction function using Tesseract.js
+
 async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string; confidence: string }[]> {
   try {
     const worker = await createWorker('eng');
-    
+
     // Convert buffer to base64 for Tesseract
     const base64Image = imageBuffer.toString('base64');
-    
+
     // Recognize text in image
     const result = await worker.recognize(`data:image/jpeg;base64,${base64Image}`);
-    
-    // Process results
+
     const results: { text: string; confidence: string }[] = [];
-    
-    // Extract text from the OCR result, preserving the original text order
+
     if (result.data.text && result.data.text.trim() !== '') {
       const seen = new Set<string>();
-      
-      // Process the text in a structured way to avoid duplicates
-      // First, split by single line breaks to get lines in the correct top-to-bottom order
       const lines = result.data.text.split('\n').filter(line => line.trim().length > 0);
-      
-      // Add each line in the original order from the image (top to bottom)
+
       lines.forEach(line => {
         const trimmedLine = line.trim();
         if (trimmedLine.length > 0 && !seen.has(trimmedLine)) {
-          results.push({
-            text: trimmedLine,
-            confidence: "0.88"
-          });
+          results.push({ text: trimmedLine, confidence: "0.88" });
           seen.add(trimmedLine);
         }
       });
-      
-      // Now process any complete sentences that might span multiple lines
-      // by joining everything with spaces and splitting by sentence endings
-      const allTextNormalized = result.data.text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
-      const sentences = allTextNormalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
-      
-      // Add detected sentences if they're substantial and not duplicates
-      sentences.forEach(sentence => {
-        const trimmedSentence = sentence.trim();
-        if (trimmedSentence.length > 15 && !seen.has(trimmedSentence)) { // Longer minimum length for sentences
-          results.push({
-            text: trimmedSentence,
-            confidence: "0.90"
-          });
-          seen.add(trimmedSentence);
-        }
-      });
-      
-      // Finally, build paragraphs from consecutive lines that belong together
-      // Since this creates the most complex text units, we do it last
-      let currentParagraph = '';
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.length === 0) continue;
-        
-        // Check if the current line ends with sentence-ending punctuation
-        const endsWithPunctuation = /[.!?]$/.test(line);
-        
-        // Add the line to the current paragraph
-        if (currentParagraph.length > 0) {
-          currentParagraph += ' ';
-        }
-        currentParagraph += line;
-        
-        // If this line ends with punctuation or it's the last line, store the paragraph
-        if (endsWithPunctuation || i === lines.length - 1) {
-          if (currentParagraph.length > 30 && !seen.has(currentParagraph)) { // Only add longer paragraphs
-            results.push({
-              text: currentParagraph,
-              confidence: "0.92"
-            });
-            seen.add(currentParagraph);
-          }
-          currentParagraph = '';
-        }
-      }
+
+      // const allTextNormalized = result.data.text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+      // const sentences = allTextNormalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+      //
+      // sentences.forEach(sentence => {
+      //   const trimmedSentence = sentence.trim();
+      //   if (trimmedSentence.length > 15 && !seen.has(trimmedSentence)) {
+      //     results.push({ text: trimmedSentence, confidence: "0.90" });
+      //     seen.add(trimmedSentence);
+      //   }
+      // });
+
+    //   let currentParagraph = '';
+    //   for (let i = 0; i < lines.length; i++) {
+    //     const line = lines[i].trim();
+    //     if (line.length === 0) continue;
+    //
+    //     const endsWithPunctuation = /[.!?]$/.test(line);
+    //
+    //     if (currentParagraph.length > 0) {
+    //       currentParagraph += ' ';
+    //     }
+    //     currentParagraph += line;
+    //
+    //     if (endsWithPunctuation || i === lines.length - 1) {
+    //       if (currentParagraph.length > 30 && !seen.has(currentParagraph)) {
+    //         results.push({ text: currentParagraph.trim(), confidence: "0.92" });
+    //         seen.add(currentParagraph.trim());
+    //       }
+    //       currentParagraph = '';
+    //     }
+    //   }
     }
-    
+
     await worker.terminate();
-    
-    // If no results, fallback to some defaults
+
+    //  If still empty, just return "no text found"
     if (results.length === 0) {
-      console.warn("No text detected in the image. Using fallback data.");
-      return [
-        { text: "Welcome to our application", confidence: "0.99" },
-        { text: "Sign in to your account", confidence: "0.98" },
-        { text: "Continue with Google", confidence: "0.97" },
-        { text: "Forgot your password?", confidence: "0.96" },
-        { text: "Privacy Policy", confidence: "0.95" },
-        { text: "Terms of Service", confidence: "0.94" }
-      ];
+      console.warn("No text detected in the image.");
+      return [{ text: "No text found", confidence: "0.0" }];
     }
-    
-    // Results are already deduplicated 
+
     return results;
   } catch (error) {
     console.error("Error extracting text with Tesseract:", error);
-    
-    // Fallback to mock data in case of failure
-    return [
-      { text: "Welcome to our application", confidence: "0.99" },
-      { text: "Sign in to your account", confidence: "0.98" },
-      { text: "Continue with Google", confidence: "0.97" },
-      { text: "Forgot your password?", confidence: "0.96" },
-      { text: "Privacy Policy", confidence: "0.95" },
-      { text: "Terms of Service", confidence: "0.94" }
-    ];
+    return [{ text: "No text found", confidence: "0.0" }];
   }
 }
 
 // Improved string matcher function based on the provided Java implementation
-async function matchStrings(extractedTexts: string[], resourceData: string, fileType: string) {
-  const resourceStrings: Record<string, string> = {};
-  
-  // Parse resource file
+
+interface MatchResult {
+  text: string;
+  stringId: string;
+}
+
+interface UnmatchedResult {
+  text: string;
+  suggestedId: string;
+}
+
+export async function matchStrings(
+    extractedTexts: string[],
+    resourceData: string,
+    fileType: string
+) {
+  const resourceStrings = new Map<string, string>();
+
   if (fileType === 'xml') {
     try {
-      const parser = new xml2js.Parser({ explicitArray: false });
-      const result = await parser.parseStringPromise(resourceData);
-      
+      const result = await parseStringPromise(resourceData, { explicitArray: false });
       if (result.resources && result.resources.string) {
         const strings = Array.isArray(result.resources.string)
-          ? result.resources.string
-          : [result.resources.string];
-        
-        strings.forEach((str: any) => {
-          if (str.$ && str.$.name && str._) {
-            // Normalize the resource string for better matching
+            ? result.resources.string
+            : [result.resources.string];
+
+        for (const str of strings) {
+          if (str.$?.name && str._) {
             const value = str._.replace(/\s+/g, ' ').trim();
-            resourceStrings[str.$.name] = value;
+            resourceStrings.set(str.$.name, value);
           }
-        });
-      }
-    } catch (error) {
-      console.error("Error parsing XML:", error);
-    }
-  } else if (fileType === 'json') {
-    try {
-      const jsonData = JSON.parse(resourceData);
-      // Parse JSON structure
-      for (const [key, value] of Object.entries(jsonData)) {
-        if (typeof value === 'string') {
-          // Normalize the resource string for better matching
-          const normalizedValue = value.replace(/\s+/g, ' ').trim();
-          resourceStrings[key] = normalizedValue;
         }
       }
     } catch (error) {
-      console.error("Error parsing JSON:", error);
+      console.error('Error parsing XML:', error);
     }
+  } else {
+    throw new Error('Only XML fileType is supported.');
   }
-  
-  // Helper functions for text matching
-  function normalizeText(text: string): string {
-    return text.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
-  }
-  
-  function calculateSimilarity(a: string, b: string): number {
-    const wordsA = a.split(' ');
-    const wordsB = b.split(' ');
-    
-    const wordCountMap = new Map<string, number>();
-    
-    // Count occurrences of words in B
-    for (const word of wordsB) {
-      wordCountMap.set(word, (wordCountMap.get(word) || 0) + 1);
-    }
-    
-    let intersectionCount = 0;
-    const unionCount = wordsA.length + wordsB.length;
-    
-    // Find intersection between A and B
-    for (const word of wordsA) {
-      const count = wordCountMap.get(word);
-      if (count && count > 0) {
-        intersectionCount++;
-        wordCountMap.set(word, count - 1);
-      }
-    }
-    
-    // Calculate Jaccard similarity
-    return unionCount === 0 ? 0 : intersectionCount / (unionCount - intersectionCount);
-  }
-  
-  // Process extracted texts to find best matches
-  interface MatchResult {
-    text: string;
-    stringId: string;
-    score: number;
-  }
-  
-  const bestMatches = new Map<string, MatchResult>();
+
   const normalizedResources = new Map<string, string>();
-  
-  // Normalize all resource strings
-  for (const [key, value] of Object.entries(resourceStrings)) {
+  for (const [key, value] of resourceStrings.entries()) {
     normalizedResources.set(key, normalizeText(value));
   }
-  
-  // Split extractedTexts into sentences and try different combinations
-  let allTextCombinations: string[] = [];
-  
-  // First, add all the original extracted texts
-  allTextCombinations = [...extractedTexts];
-  
-  // Then, try to combine adjacent strings to form potential sentences
-  for (let i = 0; i < extractedTexts.length; i++) {
-    let combined = extractedTexts[i];
-    for (let j = i + 1; j < Math.min(i + 5, extractedTexts.length); j++) {
-      combined += " " + extractedTexts[j];
-      allTextCombinations.push(combined);
-    }
-  }
-  
-  // Split long texts into sentences that might match resource strings
-  const sentenceSplitted: string[] = [];
-  for (const text of allTextCombinations) {
-    if (text.length > 20) {
-      const sentences = text.split(/(?<=[.!?])\s+/);
-      sentenceSplitted.push(...sentences);
-    }
-  }
-  allTextCombinations = [...allTextCombinations, ...sentenceSplitted];
-  
-  // Match each text against resource strings
-  for (const text of allTextCombinations) {
-    if (!text || text.trim().length === 0) continue;
-    
-    const normalizedText = normalizeText(text);
-    let bestKey = "";
-    let bestScore = 0;
-    
-    // Use Array.from to convert Map entries to an array for iteration
-    Array.from(normalizedResources.entries()).forEach(([key, normalizedValue]) => {
-      const score = calculateSimilarity(normalizedText, normalizedValue);
-      if (score > bestScore && score > 0.3) { // Threshold for accepting a match
-        bestScore = score;
-        bestKey = key;
+
+  const matches: MatchResult[] = [];
+  const unmatched: UnmatchedResult[] = [];
+
+  for (const extractedText of extractedTexts) {
+    const sentences = extractedText.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+    let foundMatches: Map<string, { stringId: string; score: number }> = new Map();
+
+    if (sentences.length === 1) {
+      const normalizedSentence = normalizeText(sentences[0]);
+      let bestKey = '';
+      let bestScore = 0;
+
+      for (const [key, normalizedValue] of normalizedResources.entries()) {
+        if (Math.abs(normalizedSentence.length - normalizedValue.length) > 100) {
+          continue;
+        }
+
+        const score = similarity(normalizedSentence, normalizedValue);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestKey = key;
+
+          if (bestScore === 1.0) {
+            break;
+          }
+        }
       }
-    });
-    
-    if (bestKey && bestScore > 0) {
-      const currentMatch = bestMatches.get(text);
-      if (!currentMatch || bestScore > currentMatch.score) {
-        bestMatches.set(text, {
-          text,
-          stringId: bestKey,
-          score: bestScore
-        });
+
+      if (bestScore >= 0.8) {
+        foundMatches.set(sentences[0], { stringId: bestKey, score: bestScore });
+      }
+    } else {
+      const n = sentences.length;
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j <= n; j++) {
+          const combined = sentences.slice(i, j).join(' ').trim();
+          if (!combined) continue;
+
+          const normalizedCombined = normalizeText(combined);
+          let bestKey = '';
+          let bestScore = 0;
+
+          for (const [key, normalizedValue] of normalizedResources.entries()) {
+            if (Math.abs(normalizedCombined.length - normalizedValue.length) > 100) {
+              continue;
+            }
+
+            const score = similarity(normalizedCombined, normalizedValue);
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestKey = key;
+
+              if (bestScore === 1.0) {
+                break;
+              }
+            }
+          }
+
+          if (bestScore >= 0.8) {
+            foundMatches.set(combined, { stringId: bestKey, score: bestScore });
+          }
+        }
+      }
+    }
+
+    if (foundMatches.size > 0) {
+      for (const [textBlock, match] of foundMatches.entries()) {
+        matches.push({ text: textBlock, stringId: match.stringId });
+      }
+    } else {
+      unmatched.push({
+        text: extractedText,
+        suggestedId: generateSuggestedId(extractedText)
+      });
+    }
+  }
+
+  return {
+    matched: matches,
+    unmatched: unmatched
+  };
+}
+
+function normalizeText(text: string): string {
+  return text
+      .replace(/%\d+\$[sd]/g, 'placeholder')  // Handle placeholders
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+}
+
+function similarity(a: string, b: string): number {
+  const wordsA = a.split(' ').filter(Boolean);
+  const wordsB = b.split(' ').filter(Boolean);
+
+  let intersectionCount = 0;
+  const wordCountMap = new Map<string, number>();
+
+  for (const word of wordsB) {
+    wordCountMap.set(word, (wordCountMap.get(word) || 0) + 1);
+  }
+
+  for (const word of wordsA) {
+    if (wordCountMap.has(word)) {
+      intersectionCount++;
+      const count = wordCountMap.get(word)! - 1;
+      if (count === 0) {
+        wordCountMap.delete(word);
+      } else {
+        wordCountMap.set(word, count);
       }
     }
   }
-  
-  // Construct final results
-  const matches: { text: string; stringId: string }[] = [];
-  const unmatched: string[] = [];
-  const seenMatched = new Set<string>();
-  const seenUnmatched = new Set<string>();
-  
-  // Add all matched strings - use Array.from to avoid iteration issues
-  // Sort by score descending to prioritize better matches
-  Array.from(bestMatches.entries())
-    .sort((a, b) => b[1].score - a[1].score) // Sort by match score (best first)
-    .forEach(([, match]) => {
-      if (match.score > 0.3 && !seenMatched.has(match.text)) { // Only include matches above threshold and avoid duplicates
-        matches.push({ text: match.text, stringId: match.stringId });
-        seenMatched.add(match.text);
-      }
-    });
-  
-  // Find unmatched strings (original texts not in bestMatches)
-  for (const text of extractedTexts) {
-    if ((!bestMatches.has(text) || bestMatches.get(text)!.score <= 0.3) && !seenUnmatched.has(text)) {
-      unmatched.push(text);
-      seenUnmatched.add(text);
-    }
-  }
-  
-  // Generate suggested IDs for unmatched strings
-  const unmatchedWithSuggestions = unmatched.map(text => {
-    const suggestedId = text
+
+  const unionCount = wordsA.length + wordsB.length - intersectionCount;
+  return unionCount === 0 ? 0 : intersectionCount / unionCount;
+}
+
+function generateSuggestedId(text: string): string {
+  return text
       .toLowerCase()
       .replace(/[^\w\s]/g, '')
       .replace(/\s+/g, '_')
       .slice(0, 30);
-    
-    return { text, suggestedId };
-  });
-  
-  return {
-    matched: matches,
-    unmatched: unmatchedWithSuggestions
-  };
 }
 
 // Mock code search API

@@ -293,8 +293,8 @@ export default function StepStringMatching({
                         <i className="ri-checkbox-circle-line text-success-600"></i>
                       </div>
                       <div>
-                        <p className="text-success-700 text-sm font-medium">Matched</p>
-                        <p className="text-xl font-bold text-success-800">{matchedStrings.length}</p>
+                        <p className="text-success-700 text-green-900 text-sm font-medium">Matched</p>
+                        <p className="text-xl font-bold text-green-900 text-success-800">{matchedStrings.length}</p>
                       </div>
                     </div>
                   </div>
@@ -359,12 +359,12 @@ export default function StepStringMatching({
                       </div>
                       <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
                         <table className="min-w-full divide-y divide-neutral-200 text-sm">
-                          <thead className="bg-gradient-to-r from-success-50 to-green-50">
+                          <thead className="bg-success-50 from-success-50 to-green-50">
                             <tr>
-                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider text-green-800">
                                 Extracted Text
                               </th>
-                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider text-green-800">
                                 Resource ID
                               </th>
                             </tr>
@@ -376,7 +376,7 @@ export default function StepStringMatching({
                                   <div className="text-neutral-800">{string.text}</div>
                                 </td>
                                 <td className="px-3 py-2">
-                                  <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono">
+                                  <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono text-green-800">
                                     {string.stringId}
                                   </span>
                                 </td>

@@ -23,7 +23,7 @@ export default function Home() {
         {/* Workflow Stepper */}
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
-            <h2 className="text-lg font-medium mb-4">I18N Standardization Process</h2>
+            <h2 className="text-lg font-medium mb-4 text-black">I18N Workflow</h2>
             <div className="flex flex-wrap items-center justify-between text-sm">
               <WorkflowStepper currentStep={currentStep} />
               
