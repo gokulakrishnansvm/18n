@@ -37,42 +37,50 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
     
     // Extract text from the OCR result, preserving the original text order
     if (result.data.text && result.data.text.trim() !== '') {
-      // Split by single line breaks to get lines in the correct order
+      const seen = new Set<string>();
+      
+      // Process the text in a structured way to avoid duplicates
+      // First, split by single line breaks to get lines in the correct top-to-bottom order
       const lines = result.data.text.split('\n').filter(line => line.trim().length > 0);
       
       // Add each line in the original order from the image (top to bottom)
       lines.forEach(line => {
-        if (line.trim().length > 0) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.length > 0 && !seen.has(trimmedLine)) {
           results.push({
-            text: line.trim(),
+            text: trimmedLine,
             confidence: "0.88"
           });
+          seen.add(trimmedLine);
         }
       });
       
-      // Since lines may not be complete sentences, also split by sentences
-      const allTextNormalized = result.data.text.replace(/\n/g, ' ');
+      // Now process any complete sentences that might span multiple lines
+      // by joining everything with spaces and splitting by sentence endings
+      const allTextNormalized = result.data.text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
       const sentences = allTextNormalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
       
-      // Add detected sentences
+      // Add detected sentences if they're substantial and not duplicates
       sentences.forEach(sentence => {
-        if (sentence.trim().length > 0 && sentence.length > 10) { // Only add meaningful sentences
+        const trimmedSentence = sentence.trim();
+        if (trimmedSentence.length > 15 && !seen.has(trimmedSentence)) { // Longer minimum length for sentences
           results.push({
-            text: sentence.trim(),
+            text: trimmedSentence,
             confidence: "0.90"
           });
+          seen.add(trimmedSentence);
         }
       });
       
-      // Add any paragraphs (identified by consecutive lines without breaks)
+      // Finally, build paragraphs from consecutive lines that belong together
+      // Since this creates the most complex text units, we do it last
       let currentParagraph = '';
-      let lastLineEndsWithPunctuation = false;
       
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line.length === 0) continue;
         
-        // Check if the current line ends with punctuation
+        // Check if the current line ends with sentence-ending punctuation
         const endsWithPunctuation = /[.!?]$/.test(line);
         
         // Add the line to the current paragraph
@@ -83,16 +91,15 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
         
         // If this line ends with punctuation or it's the last line, store the paragraph
         if (endsWithPunctuation || i === lines.length - 1) {
-          if (currentParagraph.length > 20) { // Only add substantial paragraphs
+          if (currentParagraph.length > 30 && !seen.has(currentParagraph)) { // Only add longer paragraphs
             results.push({
               text: currentParagraph,
               confidence: "0.92"
             });
+            seen.add(currentParagraph);
           }
           currentParagraph = '';
         }
-        
-        lastLineEndsWithPunctuation = endsWithPunctuation;
       }
     }
     
@@ -111,17 +118,8 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
       ];
     }
     
-    // Remove duplicate text entries but preserve order
-    const seen = new Set<string>();
-    const uniqueResults = results.filter(item => {
-      if (seen.has(item.text)) {
-        return false;
-      }
-      seen.add(item.text);
-      return true;
-    });
-    
-    return uniqueResults;
+    // Results are already deduplicated 
+    return results;
   } catch (error) {
     console.error("Error extracting text with Tesseract:", error);
     
@@ -283,18 +281,25 @@ async function matchStrings(extractedTexts: string[], resourceData: string, file
   // Construct final results
   const matches: { text: string; stringId: string }[] = [];
   const unmatched: string[] = [];
+  const seenMatched = new Set<string>();
+  const seenUnmatched = new Set<string>();
   
   // Add all matched strings - use Array.from to avoid iteration issues
-  Array.from(bestMatches.entries()).forEach(([, match]) => {
-    if (match.score > 0.3) { // Only include matches above threshold
-      matches.push({ text: match.text, stringId: match.stringId });
-    }
-  });
+  // Sort by score descending to prioritize better matches
+  Array.from(bestMatches.entries())
+    .sort((a, b) => b[1].score - a[1].score) // Sort by match score (best first)
+    .forEach(([, match]) => {
+      if (match.score > 0.3 && !seenMatched.has(match.text)) { // Only include matches above threshold and avoid duplicates
+        matches.push({ text: match.text, stringId: match.stringId });
+        seenMatched.add(match.text);
+      }
+    });
   
   // Find unmatched strings (original texts not in bestMatches)
   for (const text of extractedTexts) {
-    if (!bestMatches.has(text) || bestMatches.get(text)!.score <= 0.3) {
+    if ((!bestMatches.has(text) || bestMatches.get(text)!.score <= 0.3) && !seenUnmatched.has(text)) {
       unmatched.push(text);
+      seenUnmatched.add(text);
     }
   }
   
