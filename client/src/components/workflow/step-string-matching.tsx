@@ -291,32 +291,57 @@ export default function StepStringMatching({
               {/* Matched strings section */}
               {matchedStrings.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="font-medium text-neutral-800 mb-2 flex items-center gap-1">
-                    <i className="ri-checkbox-circle-line text-success-500"></i>
-                    <span>Matched Strings</span>
-                  </h3>
-                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-medium text-neutral-800 flex items-center gap-1">
+                      <div className="bg-success-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
+                        <i className="ri-checkbox-circle-fill text-success-600"></i>
+                      </div>
+                      <span>Matched Strings</span>
+                    </h3>
+                    <button 
+                      onClick={() => {
+                        // Export matched strings as CSV
+                        const csvContent = [
+                          ['Text', 'Resource ID'],
+                          ...matchedStrings.map(item => [item.text, item.stringId])
+                        ].map(row => row.join(',')).join('\n');
+                        
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'matched_strings.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
+                    >
+                      <i className="ri-download-line"></i>
+                      <span>Export</span>
+                    </button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
                     <table className="min-w-full divide-y divide-neutral-200 text-sm">
-                      <thead className="bg-neutral-50">
+                      <thead className="bg-gradient-to-r from-success-50 to-green-50">
                         <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
                             Extracted Text
                           </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
                             Resource ID
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-neutral-100">
                         {matchedStrings.map((string, index) => (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-neutral-50'}>
+                          <tr key={index} className="hover:bg-neutral-50 transition-colors">
                             <td className="px-3 py-2">
-                              <div className="text-neutral-800 font-medium">{string.text}</div>
+                              <div className="text-neutral-800">{string.text}</div>
                             </td>
                             <td className="px-3 py-2">
-                              <code className="text-xs bg-neutral-100 text-neutral-700 px-1 py-0.5 rounded">
+                              <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono">
                                 {string.stringId}
-                              </code>
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -329,32 +354,57 @@ export default function StepStringMatching({
               {/* Unmatched strings section - only show from extracted text, not resource file */}
               {unmatchedStrings.length > 0 && (
                 <div>
-                  <h3 className="font-medium text-neutral-800 mb-2 flex items-center gap-1">
-                    <i className="ri-error-warning-line text-amber-500"></i>
-                    <span>Text Needing Translation</span>
-                  </h3>
-                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-medium text-neutral-800 flex items-center gap-1">
+                      <div className="bg-amber-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
+                        <i className="ri-error-warning-fill text-amber-600"></i>
+                      </div>
+                      <span>Text Needing Translation</span>
+                    </h3>
+                    <button 
+                      onClick={() => {
+                        // Export unmatched strings as CSV with suggested IDs
+                        const csvContent = [
+                          ['Text', 'Suggested ID'],
+                          ...unmatchedStrings.map(item => [item.text, item.suggestedId])
+                        ].map(row => row.join(',')).join('\n');
+                        
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'unmatched_strings.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
+                    >
+                      <i className="ri-download-line"></i>
+                      <span>Export</span>
+                    </button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
                     <table className="min-w-full divide-y divide-neutral-200 text-sm">
-                      <thead className="bg-neutral-50">
+                      <thead className="bg-gradient-to-r from-amber-50 to-yellow-50">
                         <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
                             Extracted Text
                           </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
                             Suggested ID
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-neutral-100">
                         {unmatchedStrings.map((string, index) => (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-neutral-50'}>
+                          <tr key={index} className="hover:bg-neutral-50 transition-colors">
                             <td className="px-3 py-2">
-                              <div className="text-neutral-800 font-medium">{string.text}</div>
+                              <div className="text-neutral-800">{string.text}</div>
                             </td>
                             <td className="px-3 py-2">
-                              <code className="text-xs bg-neutral-100 text-neutral-700 px-1 py-0.5 rounded">
+                              <span className="inline-flex items-center bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-mono">
                                 {string.suggestedId}
-                              </code>
+                              </span>
                             </td>
                           </tr>
                         ))}
