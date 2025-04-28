@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
+import { FadeTransition, SlideUpTransition } from '@/components/ui/transition';
+import { Loader, ButtonLoader } from '@/components/ui/loader';
 
 interface ExtractedItem {
   text: string;
@@ -25,7 +27,18 @@ export default function StepTextExtraction({
   setExtractedItems
 }: StepTextExtractionProps) {
   const [isExtracting, setIsExtracting] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const { toast } = useToast();
+
+  // Manage animations: When items change, trigger animation
+  useEffect(() => {
+    if (extractedItems.length > 0) {
+      // Small delay to ensure animation feels natural
+      setTimeout(() => setShowResults(true), 300);
+    } else {
+      setShowResults(false);
+    }
+  }, [extractedItems]);
 
   // Fallback mock data in case the API call fails
   const mockExtractedItems = [
@@ -64,27 +77,44 @@ export default function StepTextExtraction({
       }
     },
     onSuccess: (data) => {
-      if (data.success && data.extractedItems) {
-        setExtractedItems(data.extractedItems);
-        toast({
-          title: "Text extraction complete",
-          description: `Extracted ${data.extractedItems.length} items`,
-          variant: "default"
-        });
-      }
+      // First hide results before updating them
+      setShowResults(false);
+
+      // Use a small delay to ensure animation looks natural
+      setTimeout(() => {
+        if (data.success && data.extractedItems) {
+          setExtractedItems(data.extractedItems);
+          
+          toast({
+            title: "Text extraction complete",
+            description: `Extracted ${data.extractedItems.length} items`,
+            variant: "default"
+          });
+        }
+      }, 300);
     },
     onError: (error) => {
       console.error("Mutation error:", error);
-      // Provide mock data when there's an error
-      setExtractedItems(mockExtractedItems);
-      toast({
-        title: "Using demo data",
-        description: "Connected to demo mode as text extraction service is unavailable",
-        variant: "default"
-      });
+      // Reset animations before showing fallback data
+      setShowResults(false);
+      
+      setTimeout(() => {
+        // Provide mock data when there's an error
+        setExtractedItems(mockExtractedItems);
+        
+        toast({
+          title: "Using demo data",
+          description: "Connected to demo mode as text extraction service is unavailable",
+          variant: "default"
+        });
+      }, 300);
     },
     onSettled: () => {
-      setIsExtracting(false);
+      // Add a small delay before finishing the loading state
+      // to make the transition smoother
+      setTimeout(() => {
+        setIsExtracting(false);
+      }, 500);
     }
   });
 
@@ -155,7 +185,7 @@ export default function StepTextExtraction({
           : "Extract text from your uploaded image to continue."}
       </p>
       
-      {!extractedItems.length && (
+      {(!extractedItems.length || isExtracting) && (
         <div className="mb-4">
           <button 
             onClick={handleExtractText}
@@ -164,10 +194,7 @@ export default function StepTextExtraction({
           >
             {isExtracting ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <ButtonLoader variant="white" />
                 <span>Extracting Text...</span>
               </>
             ) : (
@@ -180,57 +207,78 @@ export default function StepTextExtraction({
         </div>
       )}
       
-      {extractedItems.length > 0 && (
-        <div className="border border-neutral-200 rounded-lg mb-6">
-          <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
-            <h3 className="font-medium flex items-center gap-1">
-              <i className="ri-file-text-line text-primary-500"></i>
-              <span>Extracted Text</span>
-              <span className="ml-1 text-xs text-neutral-500">({extractedItems.length} items)</span>
-            </h3>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleExtractText}
-                className="text-sm bg-primary-50 text-primary-600 hover:bg-primary-100 px-2 py-1 rounded flex items-center gap-1"
-              >
-                <i className="ri-refresh-line"></i>
-                <span>Re-Extract</span>
-              </button>
-              <button 
-                onClick={handleCopyAll}
-                className="text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 px-2 py-1 rounded flex items-center gap-1"
-              >
-                <i className="ri-file-copy-line"></i>
-                <span>Copy All</span>
-              </button>
+      {isExtracting && extractedItems.length === 0 && (
+        <div className="my-8 py-8">
+          <SlideUpTransition show={true}>
+            <div className="flex flex-col items-center justify-center">
+              <Loader size="lg" text="Analyzing image and extracting text..." />
+              <p className="mt-4 text-neutral-500 text-sm max-w-md text-center">
+                This may take a moment. We're using OCR to identify and extract all text from your image.
+              </p>
             </div>
-          </div>
-          <div className="p-4 max-h-96 overflow-y-auto">
-            <div className="grid gap-3">
-              {extractedItems.map((item, index) => (
-                <div key={index} className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden">
-                  <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-neutral-200 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center justify-center bg-white w-6 h-6 rounded-full mr-2 text-xs font-semibold text-primary-700 border border-primary-200">{index + 1}</span>
-                      <span className="text-sm font-medium text-neutral-700">Text Block</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-                        <span>Confidence: </span>
-                        <span className={parseFloat(item.confidence) > 0.85 ? 'text-success-600' : parseFloat(item.confidence) > 0.7 ? 'text-amber-600' : 'text-red-600'}>
-                          {Math.round(parseFloat(item.confidence) * 100)}%
-                        </span>
+          </SlideUpTransition>
+        </div>
+      )}
+      
+      {extractedItems.length > 0 && (
+        <FadeTransition show={showResults} duration={400}>
+          <div className="border border-neutral-200 rounded-lg mb-6 shadow-sm">
+            <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
+              <h3 className="font-medium flex items-center gap-1">
+                <i className="ri-file-text-line text-primary-500"></i>
+                <span>Extracted Text</span>
+                <span className="ml-1 text-xs text-neutral-500">({extractedItems.length} items)</span>
+              </h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleExtractText}
+                  disabled={isExtracting}
+                  className={`text-sm bg-primary-50 text-primary-600 hover:bg-primary-100 px-2 py-1 rounded flex items-center gap-1 ${isExtracting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isExtracting ? <ButtonLoader variant="primary" /> : <i className="ri-refresh-line"></i>}
+                  <span>Re-Extract</span>
+                </button>
+                <button 
+                  onClick={handleCopyAll}
+                  className="text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 px-2 py-1 rounded flex items-center gap-1"
+                >
+                  <i className="ri-file-copy-line"></i>
+                  <span>Copy All</span>
+                </button>
+              </div>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              <div className="grid gap-3">
+                {extractedItems.map((item, index) => (
+                  <SlideUpTransition 
+                    key={index} 
+                    show={showResults} 
+                    duration={300 + index * 50} // Staggered animation
+                    className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden"
+                  >
+                    <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-neutral-200 flex justify-between items-center">
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center justify-center bg-white w-6 h-6 rounded-full mr-2 text-xs font-semibold text-primary-700 border border-primary-200">{index + 1}</span>
+                        <span className="text-sm font-medium text-neutral-700">Text Block</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+                          <span>Confidence: </span>
+                          <span className={parseFloat(item.confidence) > 0.85 ? 'text-success-600' : parseFloat(item.confidence) > 0.7 ? 'text-amber-600' : 'text-red-600'}>
+                            {Math.round(parseFloat(item.confidence) * 100)}%
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="p-3 bg-white">
-                    <p className="text-neutral-800 whitespace-pre-wrap break-words">{item.text}</p>
-                  </div>
-                </div>
-              ))}
+                    <div className="p-3 bg-white">
+                      <p className="text-neutral-800 whitespace-pre-wrap break-words">{item.text}</p>
+                    </div>
+                  </SlideUpTransition>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </FadeTransition>
       )}
       
       <div className="flex justify-between">

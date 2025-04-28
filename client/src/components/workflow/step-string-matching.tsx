@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
+import { FadeTransition, SlideUpTransition } from '@/components/ui/transition';
+import { Loader, ButtonLoader } from '@/components/ui/loader';
 
 interface ExtractedItem {
   text: string;
