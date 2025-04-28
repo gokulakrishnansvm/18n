@@ -95,7 +95,13 @@ export default function StepImageUpload({
         <label htmlFor="imageUpload" className="cursor-pointer">
           <div className="flex flex-col items-center gap-3">
             <div className="text-neutral-400 bg-neutral-100 p-4 rounded-full">
-              <i className="ri-image-add-line text-3xl"></i>
+              {/* Icon with fallback */}
+              <span className="text-3xl">
+                <i className="ri-image-add-line"></i>
+                <span className="ri-image-add-line hidden">
+                  <i className="fa-solid fa-image fa-xl"></i>
+                </span>
+              </span>
             </div>
             <div>
               <p className="font-medium text-neutral-800">
@@ -124,7 +130,12 @@ export default function StepImageUpload({
           disabled={!uploadedFile}
         >
           <span>Extract Text</span>
-          <i className="ri-arrow-right-line"></i>
+          <span>
+            <i className="ri-arrow-right-line"></i>
+            <span className="ri-arrow-right-line hidden">
+              <i className="fa-solid fa-arrow-right"></i>
+            </span>
+          </span>
         </button>
         <div className="clear-both"></div>
       </div>

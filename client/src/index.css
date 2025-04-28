@@ -120,8 +120,16 @@
   color: hsl(var(--error-500));
 }
 
+.bg-success-50 {
+  background-color: hsl(var(--success-50));
+}
+
 .bg-success-100 {
   background-color: hsl(var(--success-100));
+}
+
+.bg-warning-50 {
+  background-color: hsl(var(--warning-50));
 }
 
 .bg-warning-100 {
@@ -146,5 +154,89 @@
 
 .border-warning-500 {
   border-color: hsl(var(--warning-500));
+}
+
+.text-primary-500 {
+  color: hsl(var(--primary));
+}
+
+.text-primary-600 {
+  color: hsl(207, 90%, 47%);
+}
+
+.text-primary-700 {
+  color: hsl(207, 90%, 42%);
+}
+
+.text-primary-800 {
+  color: hsl(207, 90%, 37%);
+}
+
+.bg-primary-50 {
+  background-color: hsl(207, 90%, 95%);
+}
+
+.bg-primary-100 {
+  background-color: hsl(207, 90%, 90%);
+}
+
+.bg-primary-300 {
+  background-color: hsl(207, 90%, 65%);
+}
+
+.bg-primary-500 {
+  background-color: hsl(var(--primary));
+}
+
+.bg-primary-600 {
+  background-color: hsl(207, 90%, 47%);
+}
+
+.bg-neutral-50 {
+  background-color: hsl(0, 0%, 98%);
+}
+
+.bg-neutral-100 {
+  background-color: hsl(0, 0%, 96%);
+}
+
+.bg-neutral-200 {
+  background-color: hsl(0, 0%, 90%);
+}
+
+.text-neutral-500 {
+  color: hsl(0, 0%, 50%);
+}
+
+.text-neutral-600 {
+  color: hsl(0, 0%, 40%);
+}
+
+.text-neutral-800 {
+  color: hsl(0, 0%, 20%);
+}
+
+.border-neutral-200 {
+  border-color: hsl(0, 0%, 90%);
+}
+
+.border-neutral-300 {
+  border-color: hsl(0, 0%, 85%);
+}
+
+.hover\:border-primary-400:hover {
+  border-color: hsl(207, 90%, 60%);
+}
+
+.hover\:bg-primary-600:hover {
+  background-color: hsl(207, 90%, 47%);
+}
+
+.hover\:bg-neutral-200:hover {
+  background-color: hsl(0, 0%, 90%);
+}
+
+.hover\:text-primary-700:hover {
+  color: hsl(207, 90%, 42%);
 }
 
