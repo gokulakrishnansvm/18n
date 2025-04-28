@@ -35,44 +35,12 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
     // Process results
     const results: { text: string; confidence: string }[] = [];
     
-    // Extract text from the OCR result, preserving sentence structure
+    // Extract text from the OCR result, preserving the original text order
     if (result.data.text && result.data.text.trim() !== '') {
-      // First, keep the full text as a single block
-      results.push({
-        text: result.data.text.trim(),
-        confidence: "0.95"
-      });
-      
-      // Split the text by sentences - using regex to match end of sentences
-      const sentences = result.data.text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
-      
-      // Add each sentence with high confidence as they maintain context
-      sentences.forEach(sentence => {
-        if (sentence.trim().length > 0) {
-          results.push({
-            text: sentence.trim(),
-            confidence: "0.90"
-          });
-        }
-      });
-      
-      // Split the text by paragraphs (double line breaks)
-      const paragraphs = result.data.text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
-      
-      // Add each paragraph as a block
-      paragraphs.forEach(paragraph => {
-        if (paragraph.trim().length > 0) {
-          results.push({
-            text: paragraph.trim(),
-            confidence: "0.92"
-          });
-        }
-      });
-      
-      // Split by single line breaks to get lines
+      // Split by single line breaks to get lines in the correct order
       const lines = result.data.text.split('\n').filter(line => line.trim().length > 0);
       
-      // Add each line
+      // Add each line in the original order from the image (top to bottom)
       lines.forEach(line => {
         if (line.trim().length > 0) {
           results.push({
@@ -81,6 +49,51 @@ async function extractTextFromImage(imageBuffer: Buffer): Promise<{ text: string
           });
         }
       });
+      
+      // Since lines may not be complete sentences, also split by sentences
+      const allTextNormalized = result.data.text.replace(/\n/g, ' ');
+      const sentences = allTextNormalized.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+      
+      // Add detected sentences
+      sentences.forEach(sentence => {
+        if (sentence.trim().length > 0 && sentence.length > 10) { // Only add meaningful sentences
+          results.push({
+            text: sentence.trim(),
+            confidence: "0.90"
+          });
+        }
+      });
+      
+      // Add any paragraphs (identified by consecutive lines without breaks)
+      let currentParagraph = '';
+      let lastLineEndsWithPunctuation = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.length === 0) continue;
+        
+        // Check if the current line ends with punctuation
+        const endsWithPunctuation = /[.!?]$/.test(line);
+        
+        // Add the line to the current paragraph
+        if (currentParagraph.length > 0) {
+          currentParagraph += ' ';
+        }
+        currentParagraph += line;
+        
+        // If this line ends with punctuation or it's the last line, store the paragraph
+        if (endsWithPunctuation || i === lines.length - 1) {
+          if (currentParagraph.length > 20) { // Only add substantial paragraphs
+            results.push({
+              text: currentParagraph,
+              confidence: "0.92"
+            });
+          }
+          currentParagraph = '';
+        }
+        
+        lastLineEndsWithPunctuation = endsWithPunctuation;
+      }
     }
     
     await worker.terminate();

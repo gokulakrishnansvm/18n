@@ -183,11 +183,22 @@ export default function StepTextExtraction({
       {extractedItems.length > 0 && (
         <div className="border border-neutral-200 rounded-lg mb-6">
           <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
-            <h3 className="font-medium">Extracted Text ({extractedItems.length} items)</h3>
+            <h3 className="font-medium flex items-center gap-1">
+              <i className="ri-file-text-line text-primary-500"></i>
+              <span>Extracted Text</span>
+              <span className="ml-1 text-xs text-neutral-500">({extractedItems.length} items)</span>
+            </h3>
             <div className="flex gap-2">
               <button 
+                onClick={handleExtractText}
+                className="text-sm bg-primary-50 text-primary-600 hover:bg-primary-100 px-2 py-1 rounded flex items-center gap-1"
+              >
+                <i className="ri-refresh-line"></i>
+                <span>Re-Extract</span>
+              </button>
+              <button 
                 onClick={handleCopyAll}
-                className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                className="text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 px-2 py-1 rounded flex items-center gap-1"
               >
                 <i className="ri-file-copy-line"></i>
                 <span>Copy All</span>
@@ -195,19 +206,29 @@ export default function StepTextExtraction({
             </div>
           </div>
           <div className="p-4 max-h-96 overflow-y-auto">
-            <ul className="space-y-2">
+            <div className="grid gap-3">
               {extractedItems.map((item, index) => (
-                <li key={index} className="bg-neutral-50 p-2 rounded-md text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-neutral-800 font-medium">"{item.text}"</span>
-                    <span className="text-xs bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full">Text</span>
+                <div key={index} className="bg-white border border-neutral-200 rounded-lg shadow-sm overflow-hidden">
+                  <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-neutral-200 flex justify-between items-center">
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center justify-center bg-white w-6 h-6 rounded-full mr-2 text-xs font-semibold text-primary-700 border border-primary-200">{index + 1}</span>
+                      <span className="text-sm font-medium text-neutral-700">Text Block</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+                        <span>Confidence: </span>
+                        <span className={parseFloat(item.confidence) > 0.85 ? 'text-success-600' : parseFloat(item.confidence) > 0.7 ? 'text-amber-600' : 'text-red-600'}>
+                          {Math.round(parseFloat(item.confidence) * 100)}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-neutral-500">
-                    <span>Confidence: {Math.round(parseFloat(item.confidence) * 100)}%</span>
+                  <div className="p-3 bg-white">
+                    <p className="text-neutral-800 whitespace-pre-wrap break-words">{item.text}</p>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
       )}

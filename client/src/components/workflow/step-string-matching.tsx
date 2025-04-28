@@ -237,57 +237,132 @@ export default function StepStringMatching({
         </div>
       )}
       
-      {matchedStrings.length > 0 && (
+      {(matchedStrings.length > 0 || unmatchedStrings.length > 0) && (
         <div className="mb-6">
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
-              <h3 className="font-medium flex items-center gap-2">
-                <i className="ri-checkbox-circle-line text-success-500"></i>
-                <span>Matched Strings ({matchedStrings.length})</span>
-              </h3>
+          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+            <div className="flex border-b border-neutral-200">
+              <button 
+                className={`flex-1 px-4 py-3 text-center font-medium ${true ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-500' : 'text-neutral-600'}`}
+              >
+                Extracted Text Matching Results
+              </button>
             </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              <ul className="space-y-2 text-sm">
-                {matchedStrings.map((string, index) => (
-                  <li key={index} className="bg-neutral-50 p-3 rounded-md">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">"{string.text}"</p>
-                        <p className="text-xs text-neutral-500 mt-1">String ID: <span className="font-mono bg-neutral-100 px-1 py-0.5 rounded">{string.stringId}</span></p>
-                      </div>
-                      <span className="text-xs bg-success-100 text-success-500 px-2 py-0.5 rounded-full h-fit">Matched</span>
+            
+            <div className="p-4">
+              {/* Match statistics */}
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex-1 min-w-[120px] bg-success-50 rounded-lg p-3 border border-success-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-success-100 flex items-center justify-center">
+                      <i className="ri-checkbox-circle-line text-success-600"></i>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {unmatchedStrings.length > 0 && (
-        <div className="mb-6">
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
-              <h3 className="font-medium flex items-center gap-2">
-                <i className="ri-error-warning-line text-warning-500"></i>
-                <span>Unmatched Strings ({unmatchedStrings.length})</span>
-              </h3>
-            </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              <ul className="space-y-2 text-sm">
-                {unmatchedStrings.map((string, index) => (
-                  <li key={index} className="bg-neutral-50 p-3 rounded-md">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">"{string.text}"</p>
-                        <p className="text-xs text-neutral-500 mt-1">Suggested ID: <span className="font-mono bg-neutral-100 px-1 py-0.5 rounded">{string.suggestedId}</span></p>
-                      </div>
-                      <span className="text-xs bg-warning-100 text-warning-500 px-2 py-0.5 rounded-full h-fit">Unmatched</span>
+                    <div>
+                      <p className="text-success-700 text-sm font-medium">Matched</p>
+                      <p className="text-xl font-bold text-success-800">{matchedStrings.length}</p>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+                
+                <div className="flex-1 min-w-[120px] bg-amber-50 rounded-lg p-3 border border-amber-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                      <i className="ri-error-warning-line text-amber-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-amber-700 text-sm font-medium">Needs Translation</p>
+                      <p className="text-xl font-bold text-amber-800">{unmatchedStrings.length}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex-1 min-w-[120px] bg-blue-50 rounded-lg p-3 border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <i className="ri-file-text-line text-blue-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-blue-700 text-sm font-medium">Total Extracted</p>
+                      <p className="text-xl font-bold text-blue-800">{extractedItems.length}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Matched strings section */}
+              {matchedStrings.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="font-medium text-neutral-800 mb-2 flex items-center gap-1">
+                    <i className="ri-checkbox-circle-line text-success-500"></i>
+                    <span>Matched Strings</span>
+                  </h3>
+                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg">
+                    <table className="min-w-full divide-y divide-neutral-200 text-sm">
+                      <thead className="bg-neutral-50">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                            Extracted Text
+                          </th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                            Resource ID
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-neutral-100">
+                        {matchedStrings.map((string, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-neutral-50'}>
+                            <td className="px-3 py-2">
+                              <div className="text-neutral-800 font-medium">{string.text}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <code className="text-xs bg-neutral-100 text-neutral-700 px-1 py-0.5 rounded">
+                                {string.stringId}
+                              </code>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              {/* Unmatched strings section - only show from extracted text, not resource file */}
+              {unmatchedStrings.length > 0 && (
+                <div>
+                  <h3 className="font-medium text-neutral-800 mb-2 flex items-center gap-1">
+                    <i className="ri-error-warning-line text-amber-500"></i>
+                    <span>Text Needing Translation</span>
+                  </h3>
+                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg">
+                    <table className="min-w-full divide-y divide-neutral-200 text-sm">
+                      <thead className="bg-neutral-50">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                            Extracted Text
+                          </th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                            Suggested ID
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-neutral-100">
+                        {unmatchedStrings.map((string, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-neutral-50'}>
+                            <td className="px-3 py-2">
+                              <div className="text-neutral-800 font-medium">{string.text}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <code className="text-xs bg-neutral-100 text-neutral-700 px-1 py-0.5 rounded">
+                                {string.suggestedId}
+                              </code>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
