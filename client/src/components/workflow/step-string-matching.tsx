@@ -42,8 +42,19 @@ export default function StepStringMatching({
 }: StepStringMatchingProps) {
   const [isMatching, setIsMatching] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // Manage animations: control when results appear
+  useEffect(() => {
+    if ((matchedStrings.length > 0 || unmatchedStrings.length > 0) && !isMatching) {
+      // Show results with a slight delay for better visual effect
+      setTimeout(() => setShowResults(true), 300);
+    } else if (isMatching) {
+      setShowResults(false);
+    }
+  }, [matchedStrings, unmatchedStrings, isMatching]);
 
   const matchingMutation = useMutation({
     mutationFn: async () => {
@@ -68,17 +79,24 @@ export default function StepStringMatching({
     },
     onSuccess: (data) => {
       if (data.success) {
-        setMatchedStrings(data.matched || []);
-        setUnmatchedStrings(data.unmatched || []);
+        // Hide any existing results first to allow for a clean animation when new results come in
+        setShowResults(false);
         
-        toast({
-          title: "String matching complete",
-          description: `Matched ${data.matched?.length || 0} strings, ${data.unmatched?.length || 0} unmatched`,
-          variant: "default"
-        });
+        // Delay the data update slightly to ensure smooth animation 
+        setTimeout(() => {
+          setMatchedStrings(data.matched || []);
+          setUnmatchedStrings(data.unmatched || []);
+        
+          toast({
+            title: "String matching complete",
+            description: `Matched ${data.matched?.length || 0} strings, ${data.unmatched?.length || 0} unmatched`,
+            variant: "default"
+          });
+        }, 300);
       }
     },
     onError: (error) => {
+      setShowResults(false);
       toast({
         title: "Failed to match strings",
         description: error instanceof Error ? error.message : "An error occurred",
@@ -86,7 +104,11 @@ export default function StepStringMatching({
       });
     },
     onSettled: () => {
-      setIsMatching(false);
+      // Add a slight delay before turning off the loading state 
+      // to ensure a smoother animation transition
+      setTimeout(() => {
+        setIsMatching(false);
+      }, 400);
     }
   });
   
@@ -210,6 +232,7 @@ export default function StepStringMatching({
                   if (inputRef.current) inputRef.current.value = "";
                 }}
                 className="text-neutral-500 hover:text-neutral-700"
+                disabled={isMatching}
               >
                 <i className="ri-close-line"></i>
               </button>
@@ -223,10 +246,7 @@ export default function StepStringMatching({
           >
             {isMatching ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <ButtonLoader variant="white" />
                 <span>Matching Strings...</span>
               </>
             ) : (
@@ -239,185 +259,204 @@ export default function StepStringMatching({
         </div>
       )}
       
-      {(matchedStrings.length > 0 || unmatchedStrings.length > 0) && (
-        <div className="mb-6">
-          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
-            <div className="flex border-b border-neutral-200">
-              <button 
-                className={`flex-1 px-4 py-3 text-center font-medium ${true ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-500' : 'text-neutral-600'}`}
-              >
-                Extracted Text Matching Results
-              </button>
-            </div>
-            
-            <div className="p-4">
-              {/* Match statistics */}
-              <div className="flex flex-wrap gap-4 mb-4">
-                <div className="flex-1 min-w-[120px] bg-success-50 rounded-lg p-3 border border-success-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-success-100 flex items-center justify-center">
-                      <i className="ri-checkbox-circle-line text-success-600"></i>
-                    </div>
-                    <div>
-                      <p className="text-success-700 text-sm font-medium">Matched</p>
-                      <p className="text-xl font-bold text-success-800">{matchedStrings.length}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex-1 min-w-[120px] bg-amber-50 rounded-lg p-3 border border-amber-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                      <i className="ri-error-warning-line text-amber-600"></i>
-                    </div>
-                    <div>
-                      <p className="text-amber-700 text-sm font-medium">Needs Translation</p>
-                      <p className="text-xl font-bold text-amber-800">{unmatchedStrings.length}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex-1 min-w-[120px] bg-blue-50 rounded-lg p-3 border border-blue-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <i className="ri-file-text-line text-blue-600"></i>
-                    </div>
-                    <div>
-                      <p className="text-blue-700 text-sm font-medium">Total Extracted</p>
-                      <p className="text-xl font-bold text-blue-800">{extractedItems.length}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Matched strings section */}
-              {matchedStrings.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-neutral-800 flex items-center gap-1">
-                      <div className="bg-success-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
-                        <i className="ri-checkbox-circle-fill text-success-600"></i>
-                      </div>
-                      <span>Matched Strings</span>
-                    </h3>
-                    <button 
-                      onClick={() => {
-                        // Export matched strings as CSV
-                        const csvContent = [
-                          ['Text', 'Resource ID'],
-                          ...matchedStrings.map(item => [item.text, item.stringId])
-                        ].map(row => row.join(',')).join('\n');
-                        
-                        const blob = new Blob([csvContent], { type: 'text/csv' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'matched_strings.csv';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
-                    >
-                      <i className="ri-download-line"></i>
-                      <span>Export</span>
-                    </button>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
-                    <table className="min-w-full divide-y divide-neutral-200 text-sm">
-                      <thead className="bg-gradient-to-r from-success-50 to-green-50">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
-                            Extracted Text
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
-                            Resource ID
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-neutral-100">
-                        {matchedStrings.map((string, index) => (
-                          <tr key={index} className="hover:bg-neutral-50 transition-colors">
-                            <td className="px-3 py-2">
-                              <div className="text-neutral-800">{string.text}</div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono">
-                                {string.stringId}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              
-              {/* Unmatched strings section - only show from extracted text, not resource file */}
-              {unmatchedStrings.length > 0 && (
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-medium text-neutral-800 flex items-center gap-1">
-                      <div className="bg-amber-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
-                        <i className="ri-error-warning-fill text-amber-600"></i>
-                      </div>
-                      <span>Text Needing Translation</span>
-                    </h3>
-                    <button 
-                      onClick={() => {
-                        // Export unmatched strings as CSV with suggested IDs
-                        const csvContent = [
-                          ['Text', 'Suggested ID'],
-                          ...unmatchedStrings.map(item => [item.text, item.suggestedId])
-                        ].map(row => row.join(',')).join('\n');
-                        
-                        const blob = new Blob([csvContent], { type: 'text/csv' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'unmatched_strings.csv';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
-                    >
-                      <i className="ri-download-line"></i>
-                      <span>Export</span>
-                    </button>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
-                    <table className="min-w-full divide-y divide-neutral-200 text-sm">
-                      <thead className="bg-gradient-to-r from-amber-50 to-yellow-50">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
-                            Extracted Text
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
-                            Suggested ID
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-neutral-100">
-                        {unmatchedStrings.map((string, index) => (
-                          <tr key={index} className="hover:bg-neutral-50 transition-colors">
-                            <td className="px-3 py-2">
-                              <div className="text-neutral-800">{string.text}</div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="inline-flex items-center bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-mono">
-                                {string.suggestedId}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+      {isMatching && uploadedFile && (
+        <SlideUpTransition show={true} duration={300}>
+          <div className="mb-6 py-8">
+            <div className="flex flex-col items-center justify-center">
+              <Loader size="lg" text="Analyzing and matching strings..." />
+              <p className="mt-4 text-neutral-500 text-sm max-w-md text-center">
+                We're comparing your extracted text against the resource file to find matches and identify new strings.
+              </p>
             </div>
           </div>
-        </div>
+        </SlideUpTransition>
+      )}
+      
+      {(matchedStrings.length > 0 || unmatchedStrings.length > 0) && (
+        <FadeTransition show={showResults} duration={400}>
+          <div className="mb-6">
+            <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="flex border-b border-neutral-200">
+                <button 
+                  className={`flex-1 px-4 py-3 text-center font-medium bg-primary-50 text-primary-700 border-b-2 border-primary-500`}
+                >
+                  Extracted Text Matching Results
+                </button>
+              </div>
+              
+              <div className="p-4">
+                {/* Match statistics */}
+                <div className="flex flex-wrap gap-4 mb-4">
+                  <div className="flex-1 min-w-[120px] bg-success-50 rounded-lg p-3 border border-success-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-success-100 flex items-center justify-center">
+                        <i className="ri-checkbox-circle-line text-success-600"></i>
+                      </div>
+                      <div>
+                        <p className="text-success-700 text-sm font-medium">Matched</p>
+                        <p className="text-xl font-bold text-success-800">{matchedStrings.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 min-w-[120px] bg-amber-50 rounded-lg p-3 border border-amber-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                        <i className="ri-error-warning-line text-amber-600"></i>
+                      </div>
+                      <div>
+                        <p className="text-amber-700 text-sm font-medium">Needs Translation</p>
+                        <p className="text-xl font-bold text-amber-800">{unmatchedStrings.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 min-w-[120px] bg-blue-50 rounded-lg p-3 border border-blue-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i className="ri-file-text-line text-blue-600"></i>
+                      </div>
+                      <div>
+                        <p className="text-blue-700 text-sm font-medium">Total Extracted</p>
+                        <p className="text-xl font-bold text-blue-800">{extractedItems.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Matched strings section */}
+                {matchedStrings.length > 0 && (
+                  <SlideUpTransition show={showResults} duration={300}>
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium text-neutral-800 flex items-center gap-1">
+                          <div className="bg-success-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
+                            <i className="ri-checkbox-circle-fill text-success-600"></i>
+                          </div>
+                          <span>Matched Strings</span>
+                        </h3>
+                        <button 
+                          onClick={() => {
+                            // Export matched strings as CSV
+                            const csvContent = [
+                              ['Text', 'Resource ID'],
+                              ...matchedStrings.map(item => [item.text, item.stringId])
+                            ].map(row => row.join(',')).join('\n');
+                            
+                            const blob = new Blob([csvContent], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'matched_strings.csv';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <i className="ri-download-line"></i>
+                          <span>Export</span>
+                        </button>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
+                        <table className="min-w-full divide-y divide-neutral-200 text-sm">
+                          <thead className="bg-gradient-to-r from-success-50 to-green-50">
+                            <tr>
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
+                                Extracted Text
+                              </th>
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-success-800 uppercase tracking-wider">
+                                Resource ID
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-neutral-100">
+                            {matchedStrings.map((string, index) => (
+                              <tr key={index} className="hover:bg-neutral-50 transition-colors">
+                                <td className="px-3 py-2">
+                                  <div className="text-neutral-800">{string.text}</div>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono">
+                                    {string.stringId}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </SlideUpTransition>
+                )}
+                
+                {/* Unmatched strings section - only show from extracted text, not resource file */}
+                {unmatchedStrings.length > 0 && (
+                  <SlideUpTransition show={showResults} duration={400}>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium text-neutral-800 flex items-center gap-1">
+                          <div className="bg-amber-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
+                            <i className="ri-error-warning-fill text-amber-600"></i>
+                          </div>
+                          <span>Text Needing Translation</span>
+                        </h3>
+                        <button 
+                          onClick={() => {
+                            // Export unmatched strings as CSV with suggested IDs
+                            const csvContent = [
+                              ['Text', 'Suggested ID'],
+                              ...unmatchedStrings.map(item => [item.text, item.suggestedId])
+                            ].map(row => row.join(',')).join('\n');
+                            
+                            const blob = new Blob([csvContent], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'unmatched_strings.csv';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="text-xs bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <i className="ri-download-line"></i>
+                          <span>Export</span>
+                        </button>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto border border-neutral-200 rounded-lg shadow-sm">
+                        <table className="min-w-full divide-y divide-neutral-200 text-sm">
+                          <thead className="bg-gradient-to-r from-amber-50 to-yellow-50">
+                            <tr>
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
+                                Extracted Text
+                              </th>
+                              <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-amber-800 uppercase tracking-wider">
+                                Suggested ID
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-neutral-100">
+                            {unmatchedStrings.map((string, index) => (
+                              <tr key={index} className="hover:bg-neutral-50 transition-colors">
+                                <td className="px-3 py-2">
+                                  <div className="text-neutral-800">{string.text}</div>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className="inline-flex items-center bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-mono">
+                                    {string.suggestedId}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </SlideUpTransition>
+                )}
+              </div>
+            </div>
+          </div>
+        </FadeTransition>
       )}
       
       <div className="flex justify-between">
