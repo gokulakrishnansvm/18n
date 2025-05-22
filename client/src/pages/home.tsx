@@ -10,6 +10,8 @@ import StepAIAnalysis from "@/components/workflow/step-ai-analysis";
 import StepReportGeneration from "@/components/workflow/step-report-generation";
 import DetailsPanel from "@/components/panels/details-panel";
 import { useWorkflow } from "@/hooks/use-workflow";
+import { FadeTransition } from '@/components/ui/transition';
+
 
 export default function Home() {
   const workflow = useWorkflow();
@@ -44,23 +46,27 @@ export default function Home() {
           <div className="lg:col-span-2">
             {/* Workflow Steps */}
             <div>
-              <StepImageUpload 
-                isActive={currentStep === 1} 
-                onComplete={workflow.goToNextStep} 
-                onImageUpload={workflow.setUploadedImage}
-              />
-              
-              <StepTextExtraction 
-                isActive={currentStep === 2} 
-                onComplete={workflow.goToNextStep}
-                onPrevious={workflow.goToPreviousStep}
-                extractedItems={workflow.extractedItems}
-                setExtractedItems={workflow.setExtractedItems}
-                uploadedImage={workflow.uploadedImage}
-              />
-              
-              <StepStringMatching 
-                isActive={currentStep === 3} 
+              <FadeTransition show={currentStep === 1} duration={300} className={"w-full"}>
+                  <StepImageUpload
+                      isActive={true}
+                      onComplete={workflow.goToNextStep}
+                      onImageUpload={workflow.setUploadedImage}
+                  />
+              </FadeTransition>
+
+              <FadeTransition show={currentStep === 2} duration={300} className={"w-full"}>
+                <StepTextExtraction
+                isActive={true}
+              onComplete={workflow.goToNextStep}
+              onPrevious={workflow.goToPreviousStep}
+              extractedItems={workflow.extractedItems}
+              setExtractedItems={workflow.setExtractedItems}
+              uploadedImage={workflow.uploadedImage}
+            /></FadeTransition>
+
+              <FadeTransition show={currentStep === 3} duration={300} className={"w-full"}>
+            <StepStringMatching
+                isActive={true}
                 onComplete={workflow.goToNextStep}
                 onPrevious={workflow.goToPreviousStep}
                 extractedItems={workflow.extractedItems}
@@ -68,35 +74,42 @@ export default function Home() {
                 unmatchedStrings={workflow.unmatchedStrings}
                 setMatchedStrings={workflow.setMatchedStrings}
                 setUnmatchedStrings={workflow.setUnmatchedStrings}
-              />
-              
-              <StepCodeSearch 
-                isActive={currentStep === 4} 
+            />
+              </FadeTransition>
+
+              <FadeTransition show={currentStep === 4} duration={300} className={"w-full"}>
+            <StepCodeSearch
+                isActive={true}
                 onComplete={workflow.goToNextStep}
                 onPrevious={workflow.goToPreviousStep}
                 matchedStrings={workflow.matchedStrings}
                 codeSnippets={workflow.codeSnippets}
                 setCodeSnippets={workflow.setCodeSnippets}
-              />
-              
-              <StepAIAnalysis 
-                isActive={currentStep === 5} 
+            />
+              </FadeTransition>
+
+              <FadeTransition show={currentStep === 5} duration={300} className={"w-full"}>
+            <StepAIAnalysis
+                isActive={true}
                 onComplete={workflow.goToNextStep}
                 onPrevious={workflow.goToPreviousStep}
                 codeSnippets={workflow.codeSnippets}
                 suggestions={workflow.suggestions}
                 setSuggestions={workflow.setSuggestions}
-              />
-              
-              <StepReportGeneration 
-                isActive={currentStep === 6} 
+            />
+              </FadeTransition>
+
+              <FadeTransition show={currentStep === 6} duration={300} className={"w-full"}>
+            <StepReportGeneration
+                isActive={true}
                 onPrevious={workflow.goToPreviousStep}
                 extractedItems={workflow.extractedItems}
                 matchedStrings={workflow.matchedStrings}
                 unmatchedStrings={workflow.unmatchedStrings}
                 codeSnippets={workflow.codeSnippets}
                 suggestions={workflow.suggestions}
-              />
+            />
+              </FadeTransition>
             </div>
           </div>
 

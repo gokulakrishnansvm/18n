@@ -143,7 +143,7 @@ export default function StepCodeSearch({
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-lg font-semibold">Step 4: Code Search</h2>
+        <h2 className="text-lg font-semibold text-black">Step 4: Code Search</h2>
         <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full">Active</span>
       </div>
       

@@ -177,7 +177,7 @@ export default function StepStringMatching({
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-lg font-semibold">Step 3: Match Strings</h2>
+        <h2 className="text-lg font-semibold text-black">Step 3: Match Strings</h2>
         <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full">Active</span>
       </div>
       
@@ -217,12 +217,12 @@ export default function StepStringMatching({
       
       {uploadedFile && (matchedStrings.length === 0 && unmatchedStrings.length === 0) && (
         <div className="mb-6">
-          <div className="bg-neutral-50 p-4 rounded-md flex items-center mb-4">
+          <div className="bg-neutral-50 p-4 rounded-md flex items-center mb-4" >
             <div className="flex-shrink-0 mr-3">
               <i className="ri-file-list-3-line text-primary-500 text-xl"></i>
             </div>
             <div className="flex-grow">
-              <p className="font-medium">{uploadedFile.name}</p>
+              <p className="font-medium text-neutral-600">{uploadedFile.name}</p>
               <p className="text-sm text-neutral-500">{(uploadedFile.size / 1024).toFixed(2)} KB</p>
             </div>
             <div>
@@ -376,9 +376,17 @@ export default function StepStringMatching({
                                   <div className="text-neutral-800">{string.text}</div>
                                 </td>
                                 <td className="px-3 py-2">
-                                  <span className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono text-green-800">
-                                    {string.stringId}
-                                  </span>
+                                  <div className="flex flex-col gap-1">
+                                    <span
+                                        className="inline-flex items-center bg-success-50 text-success-700 px-2 py-0.5 rounded text-xs font-mono text-green-800">
+                                      {string.stringId}
+                                    </span>
+                                    {string.resourceContent && (
+                                        <span className="text-xs text-neutral-600">
+                                        Resource: {string.resourceContent}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -388,13 +396,13 @@ export default function StepStringMatching({
                     </div>
                   </SlideUpTransition>
                 )}
-                
+
                 {/* Unmatched strings section - only show from extracted text, not resource file */}
                 {unmatchedStrings.length > 0 && (
-                  <SlideUpTransition show={showResults} duration={400}>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-medium text-neutral-800 flex items-center gap-1">
+                    <SlideUpTransition show={showResults} duration={400}>
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-medium text-neutral-800 flex items-center gap-1">
                           <div className="bg-amber-100 rounded-full p-0.5 w-5 h-5 flex items-center justify-center">
                             <i className="ri-error-warning-fill text-amber-600"></i>
                           </div>

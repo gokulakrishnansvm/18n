@@ -15,7 +15,9 @@ interface StepTextExtractionProps {
   onPrevious: () => void;
   uploadedImage: File | null;
   extractedItems: ExtractedItem[];
-  setExtractedItems: (items: ExtractedItem[]) => void;
+  setExtractedItems: (items: ({ text: string } | { text: string } | { text: string } | { text: string } | {
+    text: string
+  } | { text: string })[]) => void;
 }
 
 export default function StepTextExtraction({
@@ -42,12 +44,12 @@ export default function StepTextExtraction({
 
   // Fallback mock data in case the API call fails
   const mockExtractedItems = [
-    { text: "Welcome to our application", confidence: "0.99" },
-    { text: "Sign in to your account", confidence: "0.98" },
-    { text: "Continue with Google", confidence: "0.97" },
-    { text: "Forgot your password?", confidence: "0.96" },
-    { text: "Privacy Policy", confidence: "0.95" },
-    { text: "Terms of Service", confidence: "0.94" }
+    { text: "Welcome to our application" },
+    { text: "Sign in to your account"},
+    { text: "Continue with Google" },
+    { text: "Forgot your password?" },
+    { text: "Privacy Policy" },
+    { text: "Terms of Service" }
   ];
 
   const extractMutation = useMutation({
@@ -175,7 +177,7 @@ export default function StepTextExtraction({
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-lg font-semibold">Step 2: Extract Text</h2>
+        <h2 className="text-lg font-semibold text-black">Step 2: Extract Text</h2>
         <span className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full">Active</span>
       </div>
       
@@ -224,9 +226,9 @@ export default function StepTextExtraction({
         <FadeTransition show={showResults} duration={400}>
           <div className="border border-neutral-200 rounded-lg mb-6 shadow-sm">
             <div className="px-4 py-3 border-b border-neutral-200 flex justify-between items-center">
-              <h3 className="font-medium flex items-center gap-1">
+              <h3 className="font-medium flex items-center gap-1 text-black">
                 <i className="ri-file-text-line text-primary-500"></i>
-                <span>Extracted Text</span>
+                <span >Extracted Text</span>
                 <span className="ml-1 text-xs text-neutral-500">({extractedItems.length} items)</span>
               </h3>
               <div className="flex gap-2">
@@ -262,12 +264,24 @@ export default function StepTextExtraction({
                         <span className="text-sm font-medium text-neutral-700">Text Block</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-                          <span>Confidence: </span>
-                          <span className={parseFloat(item.confidence) > 0.85 ? 'text-success-600' : parseFloat(item.confidence) > 0.7 ? 'text-amber-600' : 'text-red-600'}>
-                            {Math.round(parseFloat(item.confidence) * 100)}%
-                          </span>
-                        </div>
+                      {/*  <div*/}
+                      {/*      className="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">*/}
+                      {/*    <span>Confidence: </span>*/}
+                      {/*    <span*/}
+                      {/*        className={parseFloat(item.confidence) > 0.85 ? 'text-success-600' : parseFloat(item.confidence) > 0.7 ? 'text-amber-600' : 'text-red-600'}>*/}
+                      {/*      {Math.round(parseFloat(item.confidence) * 100)}%*/}
+                      {/*    </span>*/}
+                      {/*  </div>*/}
+                        <button
+                            onClick={() => {
+                              const newItems = extractedItems.filter((_, i) => i !== index);
+                              setExtractedItems(newItems);
+                            }}
+                            className="text-red-600 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                            title="Delete"
+                        >
+                          <i className="ri-delete-bin-line"></i>
+                        </button>
                       </div>
                     </div>
                     <div className="p-3 bg-white">
@@ -280,11 +294,11 @@ export default function StepTextExtraction({
           </div>
         </FadeTransition>
       )}
-      
+
       <div className="flex justify-between">
-        <button 
-          onClick={onPrevious}
-          className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium px-6 py-2 rounded-md transition-colors flex items-center gap-2"
+        <button
+            onClick={onPrevious}
+            className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-medium px-6 py-2 rounded-md transition-colors flex items-center gap-2"
         >
           <i className="ri-arrow-left-line"></i>
           <span>Previous</span>

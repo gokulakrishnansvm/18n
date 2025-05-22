@@ -240,3 +240,7 @@
   color: hsl(207, 90%, 42%);
 }
 
+.ri-line:last-child {
+  display: none;
+}
+

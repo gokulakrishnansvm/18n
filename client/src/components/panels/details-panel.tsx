@@ -38,7 +38,7 @@ export default function DetailsPanel({ workflow }: DetailsPanelProps) {
   
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
-      <h2 className="text-lg font-semibold mb-4">I18N Analysis Details</h2>
+      <h2 className="text-lg font-semibold mb-4 text-black">I18N Analysis Details</h2>
       
       {!hasImage ? (
         // No image selected
@@ -76,33 +76,12 @@ export default function DetailsPanel({ workflow }: DetailsPanelProps) {
               className="w-full h-auto rounded-md"
             />
           </div>
-          
-          {/* Image details */}
-          <div className="bg-neutral-50 p-3 rounded-md mb-4">
-            <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-              <i className="ri-information-line text-primary-500"></i>
-              <span>Image Details</span>
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <p className="text-neutral-500">File name:</p>
-                <p className="font-medium">{imageDetails?.name}</p>
-              </div>
-              <div>
-                <p className="text-neutral-500">Size:</p>
-                <p className="font-medium">{imageDetails?.size}</p>
-              </div>
-              <div>
-                <p className="text-neutral-500">Type:</p>
-                <p className="font-medium">{imageDetails?.type}</p>
-              </div>
-            </div>
-          </div>
+
           
           {/* Progress stats (show after extraction) */}
           {currentStep > 1 && (
             <div>
-              <h3 className="text-sm font-medium mb-3">Analysis Progress</h3>
+              <h3 className="text-sm font-medium mb-3 text-neutral-700">Analysis Progress</h3>
               
               <div className="space-y-4 mb-6">
                 <div>
@@ -165,7 +144,7 @@ export default function DetailsPanel({ workflow }: DetailsPanelProps) {
               </div>
               
               <div className="border border-neutral-200 rounded-md p-3">
-                <h3 className="text-sm font-medium mb-2">Summary</h3>
+                <h3 className="text-sm font-medium mb-2 text-neutral-700">Summary</h3>
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="bg-neutral-50 rounded-md p-2">
                     <p className="text-sm text-neutral-500">Strings</p>
@@ -177,11 +156,11 @@ export default function DetailsPanel({ workflow }: DetailsPanelProps) {
                   </div>
                   <div className="bg-neutral-50 rounded-md p-2">
                     <p className="text-sm text-neutral-500">Snippets</p>
-                    <p className="font-semibold text-lg text-secondary-500">{codeSnippets.length}</p>
+                    <p className="font-semibold text-lg text-warning-500">{codeSnippets.length}</p>
                   </div>
                   <div className="bg-neutral-50 rounded-md p-2">
                     <p className="text-sm text-neutral-500">Issues</p>
-                    <p className="font-semibold text-lg text-warning-500">{issuesIdentified}</p>
+                    <p className="font-semibold text-lg text-red-500">{issuesIdentified}</p>
                   </div>
                 </div>
               </div>
@@ -221,10 +200,10 @@ export default function DetailsPanel({ workflow }: DetailsPanelProps) {
         </div>
         
         <div className="mt-4">
-          <button className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1">
+          <a href={"https://w.amazon.com/bin/view/I18N"} className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1">
             <i className="ri-question-line"></i>
-            <span>View Full Documentation</span>
-          </button>
+            <span>View I18N Documentation</span>
+          </a>
         </div>
       </div>
     </div>
